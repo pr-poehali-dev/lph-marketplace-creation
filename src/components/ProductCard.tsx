@@ -1,18 +1,44 @@
 import { useState } from 'react';
 import Icon from '@/components/ui/icon';
-import type { Product } from '@/data/products';
+import { addToCart } from '@/lib/api';
+import { useApp } from '@/context/AppContext';
 
-interface ProductCardProps {
-  product: Product;
-  onAddToCart?: (product: Product) => void;
+interface ApiProduct {
+  id: number;
+  name: string;
+  description?: string;
+  price: number;
+  unit: string;
+  category: string;
+  region: string;
+  emoji: string;
+  badge?: string | null;
+  stock?: number;
+  rating: number;
+  reviews_count?: number;
+  seller?: string;
 }
 
-export default function ProductCard({ product, onAddToCart }: ProductCardProps) {
-  const [added, setAdded] = useState(false);
+interface ProductCardProps {
+  product: ApiProduct;
+}
 
-  const handleAdd = () => {
+export default function ProductCard({ product }: ProductCardProps) {
+  const [added, setAdded] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { user, refreshCart } = useApp();
+
+  const handleAdd = async () => {
+    if (loading) return;
+    if (!user) {
+      alert('Войдите в аккаунт, чтобы добавить товар в корзину');
+      return;
+    }
+    setLoading(true);
+    await addToCart(product.id, 1);
+    await refreshCart();
+    setLoading(false);
     setAdded(true);
-    onAddToCart?.(product);
     setTimeout(() => setAdded(false), 1500);
   };
 
@@ -55,7 +81,7 @@ export default function ProductCard({ product, onAddToCart }: ProductCardProps) 
         <div className="flex items-center gap-1 mb-3">
           <Icon name="Star" size={13} className="text-accent fill-accent" />
           <span className="text-sm font-semibold text-foreground">{product.rating}</span>
-          <span className="text-xs text-muted-foreground">({product.reviews})</span>
+          <span className="text-xs text-muted-foreground">({product.reviews_count})</span>
           <span className="text-xs text-muted-foreground ml-1">· {product.seller}</span>
         </div>
 
@@ -68,13 +94,14 @@ export default function ProductCard({ product, onAddToCart }: ProductCardProps) 
           </div>
           <button
             onClick={handleAdd}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold font-body transition-all duration-200 ${
+            disabled={loading}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold font-body transition-all duration-200 disabled:opacity-60 ${
               added
                 ? 'bg-[hsl(115,28%,32%)] text-white'
                 : 'bg-primary text-primary-foreground hover:bg-[hsl(25,55%,28%)]'
             }`}
           >
-            <Icon name={added ? 'Check' : 'Plus'} size={15} />
+            <Icon name={loading ? 'Loader' : added ? 'Check' : 'Plus'} size={15} className={loading ? 'animate-spin' : ''} />
             {added ? 'Добавлено' : 'В корзину'}
           </button>
         </div>

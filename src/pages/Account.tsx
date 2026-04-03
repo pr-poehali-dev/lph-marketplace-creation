@@ -1,24 +1,52 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Icon from '@/components/ui/icon';
-import { PRODUCTS } from '@/data/products';
+import { useApp } from '@/context/AppContext';
+import { authUpdateProfile, getOrders } from '@/lib/api';
+import AuthModal from '@/components/AuthModal';
 
 type Tab = 'profile' | 'orders' | 'favorites' | 'settings';
 
-const ORDERS = [
-  { id: '#4821', date: '28 марта 2024', status: 'Доставлено', total: 1240, items: ['Мёд цветочный', 'Яйца домашние'] },
-  { id: '#4715', date: '15 марта 2024', status: 'Доставлено', total: 580, items: ['Варенье из черники', 'Огурцы малосольные'] },
-  { id: '#4892', date: '2 апреля 2024', status: 'В пути', total: 890, items: ['Молоко козье', 'Творог домашний'] },
-];
+interface Order {
+  id: number;
+  status: string;
+  status_ru: string;
+  total: number;
+  delivery_cost: number;
+  created_at: string;
+  item_names: string[];
+}
 
 const STATUS_COLORS: Record<string, string> = {
-  'Доставлено': 'bg-[hsl(115,28%,32%,0.12)] text-[hsl(115,28%,32%)] border-[hsl(115,28%,32%,0.25)]',
-  'В пути': 'bg-[hsl(38,88%,52%,0.12)] text-[hsl(28,55%,35%)] border-[hsl(38,88%,52%,0.3)]',
-  'Обрабатывается': 'bg-muted text-muted-foreground border-border',
+  'pending': 'bg-muted text-muted-foreground border-border',
+  'confirmed': 'bg-[hsl(38,88%,52%,0.12)] text-[hsl(28,55%,35%)] border-[hsl(38,88%,52%,0.3)]',
+  'shipping': 'bg-[hsl(38,88%,52%,0.12)] text-[hsl(28,55%,35%)] border-[hsl(38,88%,52%,0.3)]',
+  'delivered': 'bg-[hsl(115,28%,32%,0.12)] text-[hsl(115,28%,32%)] border-[hsl(115,28%,32%,0.25)]',
+  'cancelled': 'bg-destructive/10 text-destructive border-destructive/20',
 };
 
 export default function Account() {
   const [activeTab, setActiveTab] = useState<Tab>('profile');
-  const [isLoggedIn] = useState(true);
+  const { user, setUser, logout, loadingUser } = useApp();
+  const [showAuth, setShowAuth] = useState(false);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({ name: '', phone: '', address: '', region: '' });
+
+  useEffect(() => {
+    if (user) {
+      setProfileForm({ name: user.name || '', phone: user.phone || '', address: user.address || '', region: user.region || '' });
+      getOrders().then((r) => {
+        if (r.ok) setOrders((r.data as { orders: Order[] }).orders || []);
+      });
+    }
+  }, [user]);
+
+  const handleSaveProfile = async () => {
+    setSavingProfile(true);
+    const r = await authUpdateProfile(profileForm);
+    if (r.ok) setUser((r.data as { user: typeof user }).user);
+    setSavingProfile(false);
+  };
 
     const TAB_ICONS: Record<Tab, string> = {
     profile: 'CircleUserRound',
@@ -36,7 +64,16 @@ export default function Account() {
 
   const tabs: Tab[] = ['profile', 'orders', 'favorites', 'settings'];
 
-  if (!isLoggedIn) {
+  if (loadingUser) {
+    return (
+      <main className="container mx-auto px-4 py-20 text-center">
+        <div className="text-5xl mb-4 animate-pulse">🌾</div>
+        <p className="font-body text-muted-foreground">Загружаем данные...</p>
+      </main>
+    );
+  }
+
+  if (!user) {
     return (
       <main className="container mx-auto px-4 py-20 max-w-md text-center">
         <div className="text-7xl mb-6">🔑</div>
@@ -44,10 +81,10 @@ export default function Account() {
         <p className="text-muted-foreground font-body mb-8">
           Войдите, чтобы видеть свои заказы, избранное и управлять профилем
         </p>
-        <button className="btn-village w-full text-base py-3 mb-3">Войти</button>
-        <button className="w-full py-3 rounded-xl border border-border font-body font-semibold text-base hover:bg-muted transition-colors">
-          Зарегистрироваться
+        <button onClick={() => setShowAuth(true)} className="btn-village w-full text-base py-3 mb-3">
+          Войти / Зарегистрироваться
         </button>
+        {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
       </main>
     );
   }
@@ -63,12 +100,14 @@ export default function Account() {
             {/* User info */}
             <div className="p-5 border-b border-border bg-gradient-to-br from-[hsl(42,50%,95%)] to-[hsl(88,20%,92%)] texture-linen">
               <div className="w-16 h-16 rounded-full bg-primary/15 flex items-center justify-center text-4xl mb-3">
-                👩‍🌾
+                {user.role === 'seller' ? '👨‍🌾' : '👩‍🌾'}
               </div>
-              <div className="font-display text-lg font-bold text-foreground">Мария Новикова</div>
-              <div className="text-xs text-muted-foreground font-body">Покупатель · Москва</div>
+              <div className="font-display text-lg font-bold text-foreground">{user.name}</div>
+              <div className="text-xs text-muted-foreground font-body">
+                {user.role === 'seller' ? 'Продавец' : 'Покупатель'}{user.region ? ` · ${user.region}` : ''}
+              </div>
               <div className="mt-2 text-xs text-[hsl(115,28%,32%)] font-body font-medium">
-                🌿 3 заказа выполнено
+                🌿 {orders.length} заказов
               </div>
             </div>
 
@@ -91,7 +130,7 @@ export default function Account() {
             </nav>
 
             <div className="p-2 border-t border-border">
-              <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-body text-destructive hover:bg-destructive/10 transition-colors">
+              <button onClick={logout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-body text-destructive hover:bg-destructive/10 transition-colors">
                 <Icon name="LogOut" size={17} />
                 Выйти
               </button>
@@ -105,52 +144,64 @@ export default function Account() {
             <div className="bg-card rounded-2xl border border-border p-6">
               <h2 className="font-display text-2xl font-bold mb-6">Личные данные</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                {[
-                  { label: 'Имя', value: 'Мария', type: 'text' },
-                  { label: 'Фамилия', value: 'Новикова', type: 'text' },
-                  { label: 'Email', value: 'maria@example.com', type: 'email' },
-                  { label: 'Телефон', value: '+7 (999) 123-45-67', type: 'tel' },
-                ].map((field) => (
-                  <div key={field.label}>
-                    <label className="block text-xs font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
-                      {field.label}
-                    </label>
-                    <input
-                      type={field.type}
-                      defaultValue={field.value}
-                      className="w-full px-4 py-2.5 rounded-xl border border-border bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    />
-                  </div>
-                ))}
+                <div>
+                  <label className="block text-xs font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Имя</label>
+                  <input type="text" value={profileForm.name} onChange={(e) => setProfileForm(f => ({...f, name: e.target.value}))}
+                    className="w-full px-4 py-2.5 rounded-xl border border-border bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                </div>
+                <div>
+                  <label className="block text-xs font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Email</label>
+                  <input type="email" value={user.email} disabled
+                    className="w-full px-4 py-2.5 rounded-xl border border-border bg-muted font-body text-sm text-muted-foreground cursor-not-allowed" />
+                </div>
+                <div>
+                  <label className="block text-xs font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Телефон</label>
+                  <input type="tel" value={profileForm.phone} onChange={(e) => setProfileForm(f => ({...f, phone: e.target.value}))}
+                    placeholder="+7 (999) 000-00-00"
+                    className="w-full px-4 py-2.5 rounded-xl border border-border bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                </div>
+                <div>
+                  <label className="block text-xs font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Регион</label>
+                  <input type="text" value={profileForm.region} onChange={(e) => setProfileForm(f => ({...f, region: e.target.value}))}
+                    placeholder="Москва"
+                    className="w-full px-4 py-2.5 rounded-xl border border-border bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                </div>
               </div>
               <div className="mb-6">
-                <label className="block text-xs font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
-                  Адрес доставки
-                </label>
-                <input
-                  type="text"
-                  defaultValue="Москва, ул. Садовая, д. 15, кв. 42"
-                  className="w-full px-4 py-2.5 rounded-xl border border-border bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
+                <label className="block text-xs font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Адрес доставки</label>
+                <input type="text" value={profileForm.address} onChange={(e) => setProfileForm(f => ({...f, address: e.target.value}))}
+                  placeholder="Улица, дом, квартира"
+                  className="w-full px-4 py-2.5 rounded-xl border border-border bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
               </div>
-              <button className="btn-village">Сохранить изменения</button>
+              <button onClick={handleSaveProfile} disabled={savingProfile} className="btn-village disabled:opacity-60">
+                {savingProfile ? 'Сохраняем...' : 'Сохранить изменения'}
+              </button>
             </div>
           )}
 
           {activeTab === 'orders' && (
             <div>
               <h2 className="font-display text-2xl font-bold mb-6">Мои заказы</h2>
+              {orders.length === 0 ? (
+                <div className="text-center py-12 bg-card rounded-2xl border border-border">
+                  <div className="text-5xl mb-3">📦</div>
+                  <p className="font-display text-xl font-bold mb-1">Заказов пока нет</p>
+                  <p className="text-muted-foreground font-body text-sm">Перейдите в каталог и сделайте первый заказ</p>
+                </div>
+              ) : (
               <div className="space-y-4">
-                {ORDERS.map((order) => (
+                {orders.map((order) => (
                   <div key={order.id} className="bg-card rounded-2xl border border-border p-5">
                     <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
                       <div>
-                        <div className="font-display text-lg font-bold">{order.id}</div>
-                        <div className="text-sm text-muted-foreground font-body">{order.date}</div>
+                        <div className="font-display text-lg font-bold">#{order.id}</div>
+                        <div className="text-sm text-muted-foreground font-body">
+                          {new Date(order.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold font-body border ${STATUS_COLORS[order.status]}`}>
-                          {order.status}
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold font-body border ${STATUS_COLORS[order.status] || STATUS_COLORS['pending']}`}>
+                          {order.status_ru}
                         </span>
                         <span className="font-display text-lg font-bold text-primary">
                           {order.total} ₽
@@ -158,43 +209,26 @@ export default function Account() {
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {order.items.map((item) => (
+                      {order.item_names.map((item) => (
                         <span key={item} className="text-xs bg-muted px-2.5 py-1 rounded-lg font-body text-muted-foreground">
                           {item}
                         </span>
                       ))}
                     </div>
-                    <div className="flex gap-2 mt-4">
-                      <button className="text-xs text-primary font-body font-semibold hover:underline">
-                        Повторить заказ
-                      </button>
-                      <span className="text-muted-foreground">·</span>
-                      <button className="text-xs text-muted-foreground font-body hover:underline">
-                        Подробнее
-                      </button>
-                    </div>
                   </div>
                 ))}
               </div>
+              )}
             </div>
           )}
 
           {activeTab === 'favorites' && (
             <div>
               <h2 className="font-display text-2xl font-bold mb-6">Избранное</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {PRODUCTS.slice(0, 3).map((product) => (
-                  <div key={product.id} className="bg-card rounded-2xl border border-border p-4 flex items-center gap-4">
-                    <span className="text-4xl">{product.emoji}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-display font-semibold text-foreground truncate">{product.name}</div>
-                      <div className="text-sm text-primary font-body font-bold">{product.price} ₽/{product.unit}</div>
-                    </div>
-                    <button className="p-2 rounded-xl hover:bg-muted transition-colors">
-                      <Icon name="ShoppingBasket" size={16} className="text-primary" />
-                    </button>
-                  </div>
-                ))}
+              <div className="text-center py-12 bg-card rounded-2xl border border-border">
+                <div className="text-5xl mb-3">❤️</div>
+                <p className="font-display text-xl font-bold mb-1">Избранное пока пусто</p>
+                <p className="text-muted-foreground font-body text-sm">Нажмите сердечко на карточке товара</p>
               </div>
             </div>
           )}

@@ -1,0 +1,16 @@
+{
+  "tests": [
+    {
+      "name": "Получить все товары",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Фильтр по категории Мёд",
+      "method": "GET",
+      "path": "/?category=%D0%9C%D1%91%D0%B4",
+      "expectedStatus": 200
+    }
+  ]
+}

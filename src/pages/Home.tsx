@@ -1,7 +1,15 @@
 import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import Icon from '@/components/ui/icon';
 import ProductCard from '@/components/ProductCard';
-import { PRODUCTS, CATEGORIES } from '@/data/products';
+import { CATEGORIES } from '@/data/products';
+import { getProducts } from '@/lib/api';
+
+interface ApiProduct {
+  id: number; name: string; description?: string; price: number; unit: string;
+  category: string; region: string; emoji: string; badge?: string | null;
+  stock?: number; rating: number; reviews_count?: number; seller?: string;
+}
 
 const HERO_IMAGE = 'https://cdn.poehali.dev/projects/896a8549-f3d7-44ee-802e-7c35ff62a322/files/3151a76e-2d53-484f-911f-a904b3d15968.jpg';
 
@@ -19,6 +27,14 @@ const STATS = [
 ];
 
 export default function Home() {
+  const [featuredProducts, setFeaturedProducts] = useState<ApiProduct[]>([]);
+
+  useEffect(() => {
+    getProducts({ limit: 8, sort: 'popular' }).then((r) => {
+      if (r.ok) setFeaturedProducts((r.data as { products: ApiProduct[] }).products || []);
+    });
+  }, []);
+
   return (
     <main>
       {/* Hero Section */}
@@ -124,9 +140,12 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {PRODUCTS.slice(0, 8).map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
+          {featuredProducts.length > 0
+            ? featuredProducts.map((product) => <ProductCard key={product.id} product={product} />)
+            : Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="bg-card rounded-2xl border border-border h-80 animate-pulse" />
+              ))
+          }
         </div>
       </section>
 

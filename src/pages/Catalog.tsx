@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import ProductCard from '@/components/ProductCard';
-import { PRODUCTS, CATEGORIES, REGIONS } from '@/data/products';
+import { CATEGORIES, REGIONS } from '@/data/products';
+import { getProducts } from '@/lib/api';
 
 const SORT_OPTIONS = [
   { value: 'popular', label: 'По популярности' },
@@ -11,34 +12,40 @@ const SORT_OPTIONS = [
   { value: 'rating', label: 'По рейтингу' },
 ];
 
+interface ApiProduct {
+  id: number; name: string; description?: string; price: number; unit: string;
+  category: string; region: string; emoji: string; badge?: string | null;
+  stock?: number; rating: number; reviews_count?: number; seller?: string;
+}
+
 export default function Catalog() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [sort, setSort] = useState('popular');
   const [search, setSearch] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [products, setProducts] = useState<ApiProduct[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   const selectedCategory = searchParams.get('category') || '';
   const selectedRegion = searchParams.get('region') || '';
 
   const setFilter = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams);
-    if (value) {
-      params.set(key, value);
-    } else {
-      params.delete(key);
-    }
+    if (value) { params.set(key, value); } else { params.delete(key); }
     setSearchParams(params);
   };
 
-  const filtered = useMemo(() => {
-    let result = [...PRODUCTS];
-    if (selectedCategory) result = result.filter((p) => p.category === selectedCategory);
-    if (selectedRegion) result = result.filter((p) => p.region === selectedRegion);
-    if (search) result = result.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
-    if (sort === 'price_asc') result.sort((a, b) => a.price - b.price);
-    if (sort === 'price_desc') result.sort((a, b) => b.price - a.price);
-    if (sort === 'rating') result.sort((a, b) => b.rating - a.rating);
-    return result;
+  useEffect(() => {
+    setLoading(true);
+    getProducts({ category: selectedCategory || undefined, region: selectedRegion || undefined, search: search || undefined, sort }).then((r) => {
+      if (r.ok) {
+        const d = r.data as { products: ApiProduct[]; total: number };
+        setProducts(d.products || []);
+        setTotal(d.total || 0);
+      }
+      setLoading(false);
+    });
   }, [selectedCategory, selectedRegion, search, sort]);
 
   const resetFilters = () => {
@@ -178,12 +185,18 @@ export default function Catalog() {
           )}
 
           <p className="text-sm text-muted-foreground font-body mb-4">
-            Найдено: <strong>{filtered.length}</strong> товаров
+            Найдено: <strong>{total}</strong> товаров
           </p>
 
-          {filtered.length > 0 ? (
+          {loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {filtered.map((product) => (
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="bg-card rounded-2xl border border-border h-80 animate-pulse" />
+              ))}
+            </div>
+          ) : products.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {products.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>

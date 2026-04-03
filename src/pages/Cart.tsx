@@ -1,32 +1,43 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
-import { PRODUCTS } from '@/data/products';
-
-interface CartItem {
-  product: (typeof PRODUCTS)[0];
-  qty: number;
-}
+import { useApp } from '@/context/AppContext';
+import { updateCartItem, removeFromCart, createOrder } from '@/lib/api';
 
 type Step = 'cart' | 'delivery' | 'payment' | 'success';
 
 export default function Cart() {
   const [step, setStep] = useState<Step>('cart');
-  const [items, setItems] = useState<CartItem[]>([
-    { product: PRODUCTS[0], qty: 1 },
-    { product: PRODUCTS[1], qty: 2 },
-  ]);
   const [paymentMethod, setPaymentMethod] = useState('card');
+  const [deliveryMethod, setDeliveryMethod] = useState('courier');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [orderId, setOrderId] = useState<number | null>(null);
+  const [placing, setPlacing] = useState(false);
+  const { cartItems, cartTotal, refreshCart, user } = useApp();
 
-  const total = items.reduce((sum, i) => sum + i.product.price * i.qty, 0);
-  const delivery = total > 3000 ? 0 : 290;
+  const delivery = cartTotal > 3000 ? 0 : 290;
 
-  const updateQty = (id: number, delta: number) => {
-    setItems((prev) =>
-      prev
-        .map((i) => i.product.id === id ? { ...i, qty: i.qty + delta } : i)
-        .filter((i) => i.qty > 0)
-    );
+  const updateQty = async (productId: number, delta: number) => {
+    const item = cartItems.find(i => i.product_id === productId);
+    if (!item) return;
+    const newQty = item.qty + delta;
+    if (newQty <= 0) {
+      await removeFromCart(productId);
+    } else {
+      await updateCartItem(productId, newQty);
+    }
+    await refreshCart();
+  };
+
+  const handlePlaceOrder = async () => {
+    setPlacing(true);
+    const r = await createOrder({ delivery_address: deliveryAddress, delivery_method: deliveryMethod, payment_method: paymentMethod });
+    if (r.ok) {
+      setOrderId((r.data as { order_id: number }).order_id);
+      await refreshCart();
+      setStep('success');
+    }
+    setPlacing(false);
   };
 
   if (step === 'success') {
@@ -35,7 +46,7 @@ export default function Cart() {
         <div className="text-8xl mb-6 animate-fade-in">🎉</div>
         <h1 className="font-display text-4xl font-bold mb-3">Заказ оформлен!</h1>
         <p className="text-muted-foreground font-body mb-2">
-          Номер заказа: <strong className="text-primary">#5021</strong>
+          Номер заказа: <strong className="text-primary">#{orderId}</strong>
         </p>
         <p className="text-muted-foreground font-body mb-8">
           Продавцы получили уведомления и скоро свяжутся с вами для подтверждения.
@@ -86,43 +97,48 @@ export default function Cart() {
           {step === 'cart' && (
             <div>
               <h1 className="font-display text-4xl font-bold mb-6">Корзина</h1>
-              {items.length === 0 ? (
+              {!user ? (
+                <div className="text-center py-16 bg-card rounded-2xl border border-border">
+                  <div className="text-6xl mb-4">🔑</div>
+                  <h3 className="font-display text-2xl font-bold mb-2">Войдите в аккаунт</h3>
+                  <p className="text-muted-foreground font-body mb-6">Чтобы добавлять товары в корзину</p>
+                  <Link to="/account" className="btn-village">Войти</Link>
+                </div>
+              ) : cartItems.length === 0 ? (
                 <div className="text-center py-16 bg-card rounded-2xl border border-border">
                   <div className="text-6xl mb-4">🛒</div>
                   <h3 className="font-display text-2xl font-bold mb-2">Корзина пуста</h3>
-                  <p className="text-muted-foreground font-body mb-6">
-                    Добавьте товары из каталога
-                  </p>
+                  <p className="text-muted-foreground font-body mb-6">Добавьте товары из каталога</p>
                   <Link to="/catalog" className="btn-village">Перейти в каталог</Link>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {items.map((item) => (
-                    <div key={item.product.id} className="bg-card rounded-2xl border border-border p-4 flex items-center gap-4">
-                      <span className="text-4xl flex-shrink-0">{item.product.emoji}</span>
+                  {cartItems.map((item) => (
+                    <div key={item.product_id} className="bg-card rounded-2xl border border-border p-4 flex items-center gap-4">
+                      <span className="text-4xl flex-shrink-0">{item.emoji}</span>
                       <div className="flex-1 min-w-0">
-                        <div className="font-display text-lg font-semibold truncate">{item.product.name}</div>
-                        <div className="text-sm text-muted-foreground font-body">{item.product.seller}</div>
-                        <div className="badge-region mt-1 inline-block">{item.product.region}</div>
+                        <div className="font-display text-lg font-semibold truncate">{item.name}</div>
+                        <div className="text-sm text-muted-foreground font-body">{item.seller}</div>
+                        <div className="badge-region mt-1 inline-block">{item.region}</div>
                       </div>
                       <div className="flex items-center gap-3 flex-shrink-0">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => updateQty(item.product.id, -1)}
+                            onClick={() => updateQty(item.product_id, -1)}
                             className="w-8 h-8 rounded-lg bg-muted hover:bg-primary hover:text-primary-foreground flex items-center justify-center transition-colors"
                           >
                             <Icon name="Minus" size={14} />
                           </button>
                           <span className="w-6 text-center font-body font-semibold text-sm">{item.qty}</span>
                           <button
-                            onClick={() => updateQty(item.product.id, 1)}
+                            onClick={() => updateQty(item.product_id, 1)}
                             className="w-8 h-8 rounded-lg bg-muted hover:bg-primary hover:text-primary-foreground flex items-center justify-center transition-colors"
                           >
                             <Icon name="Plus" size={14} />
                           </button>
                         </div>
                         <div className="font-display text-xl font-bold text-primary min-w-20 text-right">
-                          {item.product.price * item.qty} ₽
+                          {item.price * item.qty} ₽
                         </div>
                       </div>
                     </div>
@@ -142,7 +158,7 @@ export default function Cart() {
                   { id: 'post', label: 'Почта России', desc: 'Доставка 5-14 дней', price: '200 ₽', emoji: '📮' },
                 ].map((opt) => (
                   <label key={opt.id} className="flex items-center gap-4 p-4 rounded-xl border-2 border-border hover:border-primary cursor-pointer transition-all has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                    <input type="radio" name="delivery" value={opt.id} className="accent-primary" />
+                    <input type="radio" name="delivery" value={opt.id} onChange={() => setDeliveryMethod(opt.id)} className="accent-primary" />
                     <span className="text-2xl">{opt.emoji}</span>
                     <div className="flex-1">
                       <div className="font-body font-semibold">{opt.label}</div>
@@ -155,21 +171,18 @@ export default function Cart() {
                 <hr className="section-divider" />
                 <div className="space-y-3">
                   <h3 className="font-display text-lg font-semibold">Адрес доставки</h3>
-                  {[
-                    { label: 'Город', placeholder: 'Москва' },
-                    { label: 'Улица, дом, квартира', placeholder: 'ул. Садовая, д. 15, кв. 42' },
-                  ].map((f) => (
-                    <div key={f.label}>
-                      <label className="block text-xs font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-                        {f.label}
-                      </label>
-                      <input
-                        type="text"
-                        placeholder={f.placeholder}
-                        className="w-full px-4 py-2.5 rounded-xl border border-border bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                      />
-                    </div>
-                  ))}
+                  <div>
+                    <label className="block text-xs font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                      Адрес (город, улица, дом, квартира)
+                    </label>
+                    <input
+                      type="text"
+                      value={deliveryAddress}
+                      onChange={(e) => setDeliveryAddress(e.target.value)}
+                      placeholder="Москва, ул. Садовая, д. 15, кв. 42"
+                      className="w-full px-4 py-2.5 rounded-xl border border-border bg-background font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -235,12 +248,12 @@ export default function Cart() {
           <div className="bg-card rounded-2xl border border-border p-6 sticky top-24">
             <h3 className="font-display text-xl font-bold mb-4">Ваш заказ</h3>
             <div className="space-y-2 mb-4">
-              {items.map((i) => (
-                <div key={i.product.id} className="flex justify-between text-sm font-body">
+              {cartItems.map((i) => (
+                <div key={i.product_id} className="flex justify-between text-sm font-body">
                   <span className="text-muted-foreground truncate pr-2">
-                    {i.product.emoji} {i.product.name} × {i.qty}
+                    {i.emoji} {i.name} × {i.qty}
                   </span>
-                  <span className="font-semibold whitespace-nowrap">{i.product.price * i.qty} ₽</span>
+                  <span className="font-semibold whitespace-nowrap">{i.price * i.qty} ₽</span>
                 </div>
               ))}
             </div>
@@ -248,7 +261,7 @@ export default function Cart() {
             <div className="space-y-2 text-sm font-body mb-4">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Товары</span>
-                <span>{total} ₽</span>
+                <span>{cartTotal} ₽</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Доставка</span>
@@ -257,10 +270,10 @@ export default function Cart() {
             </div>
             <div className="flex justify-between font-display text-xl font-bold text-primary mb-5">
               <span>Итого</span>
-              <span>{total + delivery} ₽</span>
+              <span>{cartTotal + delivery} ₽</span>
             </div>
 
-            {step === 'cart' && items.length > 0 && (
+            {step === 'cart' && cartItems.length > 0 && (
               <button onClick={() => setStep('delivery')} className="btn-village w-full text-base py-3">
                 Перейти к доставке
               </button>
@@ -271,8 +284,8 @@ export default function Cart() {
               </button>
             )}
             {step === 'payment' && (
-              <button onClick={() => setStep('success')} className="btn-accent w-full text-base py-3">
-                Оплатить {total + delivery} ₽
+              <button onClick={handlePlaceOrder} disabled={placing} className="btn-accent w-full text-base py-3 disabled:opacity-60">
+                {placing ? 'Оформляем...' : `Оплатить ${cartTotal + delivery} ₽`}
               </button>
             )}
 

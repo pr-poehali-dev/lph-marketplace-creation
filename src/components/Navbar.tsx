@@ -1,11 +1,15 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
+import { useApp } from '@/context/AppContext';
+import AuthModal from '@/components/AuthModal';
 
 export default function Navbar() {
-  const [cartCount] = useState(2);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
   const location = useLocation();
+  const { user, cartItems } = useApp();
+  const cartCount = cartItems.reduce((s, i) => s + i.qty, 0);
 
   const links = [
     { to: '/', label: 'Главная' },
@@ -64,13 +68,24 @@ export default function Navbar() {
               </span>
             )}
           </Link>
-          <Link
-            to="/account"
-            className="p-2 rounded-lg hover:bg-muted transition-colors"
-            title="Личный кабинет"
-          >
-            <Icon name="CircleUserRound" size={22} className="text-primary" />
-          </Link>
+          {user ? (
+            <Link
+              to="/account"
+              className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted transition-colors"
+              title="Личный кабинет"
+            >
+              <Icon name="CircleUserRound" size={20} className="text-primary" />
+              <span className="text-sm font-body font-medium text-foreground">{user.name.split(' ')[0]}</span>
+            </Link>
+          ) : (
+            <button
+              onClick={() => setShowAuth(true)}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border hover:bg-muted transition-colors text-sm font-body font-medium"
+            >
+              <Icon name="LogIn" size={18} className="text-primary" />
+              Войти
+            </button>
+          )}
           <button
             className="md:hidden p-2 rounded-lg hover:bg-muted transition-colors"
             onClick={() => setMenuOpen(!menuOpen)}
@@ -97,8 +112,19 @@ export default function Navbar() {
               {link.label}
             </Link>
           ))}
+          {user ? (
+            <Link to="/account" onClick={() => setMenuOpen(false)} className="px-4 py-2.5 rounded-lg font-body font-medium text-sm hover:bg-muted flex items-center gap-2">
+              <Icon name="CircleUserRound" size={17} className="text-primary" /> {user.name}
+            </Link>
+          ) : (
+            <button onClick={() => { setMenuOpen(false); setShowAuth(true); }} className="px-4 py-2.5 rounded-lg font-body font-medium text-sm hover:bg-muted text-left flex items-center gap-2">
+              <Icon name="LogIn" size={17} className="text-primary" /> Войти
+            </button>
+          )}
         </div>
       )}
+
+      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
     </header>
   );
 }

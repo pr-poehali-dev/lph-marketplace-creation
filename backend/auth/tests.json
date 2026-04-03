@@ -1,0 +1,24 @@
+{
+  "tests": [
+    {
+      "name": "GET /auth/me без сессии — 401",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 401
+    },
+    {
+      "name": "Регистрация нового пользователя",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "register", "email": "test_lph_v4@example.com", "password": "pass123", "name": "Тест Юзер 4"},
+      "expectedStatus": 200
+    },
+    {
+      "name": "Вход с неверным паролем — 401",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "login", "email": "test_lph_v4@example.com", "password": "wrongpass"},
+      "expectedStatus": 401
+    }
+  ]
+}
