@@ -4,89 +4,52 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 42 35% 96%;
+    --foreground: 25 25% 18%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 40 40% 98%;
+    --card-foreground: 25 25% 18%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 40 40% 98%;
+    --popover-foreground: 25 25% 18%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 28 55% 35%;
+    --primary-foreground: 42 50% 97%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 88 25% 38%;
+    --secondary-foreground: 42 50% 97%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 40 20% 90%;
+    --muted-foreground: 25 15% 48%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 38 75% 52%;
+    --accent-foreground: 25 25% 15%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 38 25% 82%;
+    --input: 38 25% 82%;
+    --ring: 28 55% 35%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
-    --sidebar-background: 0 0% 98%;
+    --sidebar-background: 40 30% 94%;
+    --sidebar-foreground: 25 25% 18%;
+    --sidebar-primary: 28 55% 35%;
+    --sidebar-primary-foreground: 42 50% 97%;
+    --sidebar-accent: 40 20% 88%;
+    --sidebar-accent-foreground: 25 25% 18%;
+    --sidebar-border: 38 25% 82%;
+    --sidebar-ring: 28 55% 35%;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Custom village palette */
+    --cream: 42 50% 95%;
+    --wood: 25 45% 35%;
+    --forest: 115 28% 32%;
+    --honey: 38 88% 52%;
+    --earth: 22 40% 28%;
+    --straw: 45 60% 78%;
   }
 }
 
@@ -97,5 +60,146 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: "Golos Text", sans-serif;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: "Cormorant", serif;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: "Cormorant", serif;
+  }
+
+  .font-body {
+    font-family: "Golos Text", sans-serif;
+  }
+
+  .texture-wood {
+    background-image:
+      repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 2px,
+        rgba(139, 90, 43, 0.03) 2px,
+        rgba(139, 90, 43, 0.03) 4px
+      ),
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 8px,
+        rgba(139, 90, 43, 0.02) 8px,
+        rgba(139, 90, 43, 0.02) 9px
+      );
+  }
+
+  .texture-linen {
+    background-image: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 3px,
+      rgba(180, 140, 80, 0.04) 3px,
+      rgba(180, 140, 80, 0.04) 6px
+    );
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease forwards;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.6s ease forwards;
+  }
+
+  .card-hover {
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+
+  .card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(139, 90, 43, 0.15);
+  }
+
+  .btn-village {
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    font-family: "Golos Text", sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    border-radius: 0.75rem;
+    transition: all 0.2s ease;
+    padding: 0.625rem 1.5rem;
+  }
+
+  .btn-village:hover {
+    background: hsl(25, 55%, 28%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(139, 90, 43, 0.3);
+  }
+
+  .btn-accent {
+    background: hsl(var(--accent));
+    color: hsl(var(--accent-foreground));
+    font-family: "Golos Text", sans-serif;
+    font-weight: 600;
+    border-radius: 0.75rem;
+    transition: all 0.2s ease;
+    padding: 0.625rem 1.5rem;
+  }
+
+  .btn-accent:hover {
+    background: hsl(38, 80%, 44%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(200, 150, 30, 0.35);
+  }
+
+  .section-divider {
+    border: none;
+    height: 2px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      hsl(var(--border)),
+      transparent
+    );
+  }
+
+  .badge-region {
+    background: hsl(88, 25%, 38%, 0.12);
+    color: hsl(var(--forest));
+    border: 1px solid hsl(88, 25%, 38%, 0.25);
+    border-radius: 9999px;
+    padding: 0.2rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: "Golos Text", sans-serif;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
